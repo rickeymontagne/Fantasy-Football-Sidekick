@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gridiron Sidekick</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12261C">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gridiron Sidekick">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #12261C;
+    --surface: #17301F;
+    --surface-raised: #1D3A26;
+    --line: #2E4B37;
+    --chalk: #F1EEE3;
+    --chalk-dim: #A9B8AB;
+    --gold: #E3AF4C;
+    --gold-dim: #7D6836;
+    --rust: #C1553A;
+    --sage: #6F8E76;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--chalk);font-family:'IBM Plex Sans',sans-serif;}
+  .app{max-width:920px;margin:0 auto;padding:28px 20px 60px;}
+
+  .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--line);margin-bottom:24px;}
+  .hero h1{font-family:'Fraunces',serif;font-weight:500;font-size:2.1rem;margin:0 0 4px;letter-spacing:-0.01em;}
+  .hero .sub{color:var(--chalk-dim);font-size:0.92rem;margin:0;}
+  .team-name-input{background:transparent;border:none;border-bottom:2px solid var(--gold-dim);color:var(--gold);font-family:'Fraunces',serif;font-size:2.1rem;font-weight:500;padding:0 0 2px;outline:none;width:100%;letter-spacing:-0.01em;}
+  .team-name-input:focus{border-bottom-color:var(--gold);}
+  .team-name-input::placeholder{color:var(--gold-dim);}
+  .week-box{text-align:right;flex-shrink:0;}
+  .week-box label{display:block;font-size:0.75rem;color:var(--chalk-dim);margin-bottom:4px;}
+  .week-box input{background:var(--surface);border:1px solid var(--line);color:var(--chalk);font-family:'IBM Plex Mono',monospace;font-size:0.95rem;padding:6px 10px;width:70px;text-align:center;border-radius:3px;}
+
+  .tabs{display:flex;gap:2px;margin-bottom:22px;border-bottom:1px solid var(--line);}
+  .tab{background:none;border:none;color:var(--chalk-dim);font-family:'IBM Plex Sans',sans-serif;font-size:0.9rem;font-weight:500;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
+  .tab:hover{color:var(--chalk);}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:20px;margin-bottom:16px;}
+  .card h2{font-family:'Fraunces',serif;font-weight:500;font-size:1.25rem;margin:0 0 4px;}
+  .card .hint{color:var(--chalk-dim);font-size:0.85rem;margin:0 0 16px;}
+
+  .roster-row{display:grid;grid-template-columns:2fr 70px 1.3fr 32px;gap:8px;margin-bottom:8px;align-items:center;}
+  .roster-row input, .roster-row select{background:var(--surface-raised);border:1px solid var(--line);color:var(--chalk);padding:8px 10px;border-radius:3px;font-family:'IBM Plex Sans',sans-serif;font-size:0.9rem;width:100%;}
+  .roster-row select{font-family:'IBM Plex Mono',monospace;}
+  .remove-btn{background:none;border:none;color:var(--rust);font-size:1.1rem;cursor:pointer;padding:4px;line-height:1;}
+  .remove-btn:hover{opacity:0.7;}
+
+  .roster-list{margin-bottom:14px;}
+  .empty-note{color:var(--chalk-dim);font-size:0.88rem;padding:14px 0;border-top:1px dashed var(--line);}
+
+  .btn{background:var(--gold);color:#1C2A17;border:none;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:0.9rem;padding:10px 18px;border-radius:3px;cursor:pointer;transition:filter .15s;}
+  .btn:hover{filter:brightness(1.08);}
+  .btn:disabled{background:var(--gold-dim);color:#12261C;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--chalk-dim);border:1px solid var(--line);font-family:'IBM Plex Sans',sans-serif;font-size:0.85rem;padding:8px 14px;border-radius:3px;cursor:pointer;}
+  .btn-ghost:hover{color:var(--chalk);border-color:var(--chalk-dim);}
+  .btn-row{display:flex;gap:8px;margin-top:6px;}
+
+  textarea{background:var(--surface-raised);border:1px solid var(--line);color:var(--chalk);padding:10px 12px;border-radius:3px;font-family:'IBM Plex Sans',sans-serif;font-size:0.9rem;width:100%;resize:vertical;min-height:80px;}
+
+  .position-tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--sage);border:1px solid var(--sage);padding:1px 6px;border-radius:2px;}
+
+  .result{background:var(--surface-raised);border-left:3px solid var(--gold);padding:14px 16px;border-radius:0 3px 3px 0;margin-top:14px;font-size:0.92rem;line-height:1.55;white-space:pre-wrap;}
+  .result.loading{color:var(--chalk-dim);font-style:italic;}
+  .result.error{border-left-color:var(--rust);color:#E8C5BC;}
+
+  .trade-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .trade-grid h3{font-size:0.85rem;color:var(--chalk-dim);font-weight:500;margin:0 0 8px;text-transform:none;}
+  @media (max-width:600px){.trade-grid{grid-template-columns:1fr;} .roster-row{grid-template-columns:1fr 55px 1fr 28px;}}
+
+  .history-item{border-top:1px solid var(--line);padding:12px 0;}
+  .history-item .meta{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--sage);margin-bottom:6px;}
+  .history-item .body{font-size:0.88rem;line-height:1.5;color:var(--chalk-dim);white-space:pre-wrap;}
+
+  .import-status{font-size:0.85rem;color:var(--sage);margin-top:8px;min-height:1.2em;}
+  .import-status.error{color:var(--rust);}
+  .matchup-saved{font-size:0.78rem;color:var(--sage);margin-top:6px;min-height:1.1em;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="hero">
+    <div style="flex:1;">
+      <input class="team-name-input" id="teamName" placeholder="Name your team" />
+      <p class="sub">Your Yahoo college fantasy sidekick — start/sit calls, waiver reads, trade grades</p>
+    </div>
+    <div class="week-box">
+      <label for="weekInput">WEEK</label>
+      <input type="number" id="weekInput" min="1" max="16" value="1" />
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-panel="roster">Roster</button>
+    <button class="tab" data-panel="startsit">Start / Sit</button>
+    <button class="tab" data-panel="waiver">Waiver Wire</button>
+    <button class="tab" data-panel="trade">Trade Analyzer</button>
+    <button class="tab" data-panel="history">History</button>
+  </div>
+
+  <div class="panel active" id="panel-roster">
+    <div class="card">
+      <h2>Import from Yahoo</h2>
+      <p class="hint">On Yahoo, open your team's roster page, select all the text on it (Ctrl/Cmd+A within the roster table works best), copy, and paste it below. Claude will pull out player names, positions, and teams.</p>
+      <textarea id="yahooRosterPaste" placeholder="Paste your Yahoo roster page text here..."></textarea>
+      <div class="btn-row">
+        <button class="btn" id="importRosterBtn">Parse & add to roster</button>
+      </div>
+      <div class="import-status" id="importStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2>This week's matchup</h2>
+      <p class="hint">Paste your Yahoo matchup page (your team, opponent, and their roster). Every start/sit, waiver, and trade check will use this as context.</p>
+      <textarea id="matchupPaste" placeholder="Paste your Yahoo matchup page text here..."></textarea>
+      <div class="btn-row">
+        <button class="btn" id="saveMatchupBtn">Save matchup</button>
+      </div>
+      <div class="matchup-saved" id="matchupSaved"></div>
+    </div>
+
+    <div class="card">
+      <h2>My roster</h2>
+      <p class="hint">Import from Yahoo above, or add players by hand below. This list powers every other tab, so keep it current.</p>
+      <div class="roster-list" id="rosterList"></div>
+      <button class="btn-ghost" id="addPlayerBtn">+ Add player</button>
+      <div class="btn-row">
+        <button class="btn" id="saveRosterBtn">Save roster</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-startsit">
+    <div class="card">
+      <h2>Start or sit</h2>
+      <p class="hint">Pick the players you're deciding between. Claude checks current news and matchups before calling it.</p>
+      <textarea id="startSitPlayers" placeholder="e.g. Jeremiyah Love (RB, Notre Dame) vs. Kaytron Allen (RB, Penn State)"></textarea>
+      <div class="btn-row">
+        <button class="btn" id="startSitBtn">Get the read</button>
+      </div>
+      <div id="startSitResult"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-waiver">
+    <div class="card">
+      <h2>Waiver wire</h2>
+      <p class="hint">Paste names available in your league, or leave blank and ask for this week's best college football pickups given your roster's weak spots.</p>
+      <textarea id="waiverPlayers" placeholder="e.g. available: Devin Neal, Justice Haynes, Dillon Bell..."></textarea>
+      <div class="btn-row">
+        <button class="btn" id="waiverBtn">Find pickups</button>
+      </div>
+      <div id="waiverResult"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-trade">
+    <div class="card">
+      <h2>Trade analyzer</h2>
+      <p class="hint">Lay out both sides of the offer for a fairness read and how it shifts your outlook.</p>
+      <div class="trade-grid">
+        <div>
+          <h3>You give</h3>
+          <textarea id="tradeGive" placeholder="Players you'd send"></textarea>
+        </div>
+        <div>
+          <h3>You get</h3>
+          <textarea id="tradeGet" placeholder="Players you'd receive"></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="tradeBtn">Analyze trade</button>
+      </div>
+      <div id="tradeResult"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-history">
+    <div class="card">
+      <h2>Past calls</h2>
+      <p class="hint">Every analysis you've run this season, newest first.</p>
+      <div id="historyList"><div class="empty-note">Nothing yet — run a start/sit, waiver, or trade check to build your log.</div></div>
+      <div class="btn-row">
+        <button class="btn-ghost" id="clearHistoryBtn">Clear history</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const POSITIONS = ['QB','RB','WR','TE','FLEX','K','DEF'];
+  let roster = [];
+  let history = [];
+  let matchups = {}; // keyed by week number -> pasted text
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      $('panel-'+tab.dataset.panel).classList.add('active');
+    });
+  });
+
+  // ---------- Storage ----------
+  async function loadState(){
+    try{
+      const r = await window.storage.get('team-meta');
+      if(r && r.value){
+        const meta = JSON.parse(r.value);
+        $('teamName').value = meta.teamName || '';
+        $('weekInput').value = meta.week || 1;
+      }
+    }catch(e){}
+    try{
+      const r = await window.storage.get('roster');
+      if(r && r.value) roster = JSON.parse(r.value);
+    }catch(e){ roster = []; }
+    try{
+      const r = await window.storage.get('history');
+      if(r && r.value) history = JSON.parse(r.value);
+    }catch(e){ history = []; }
+    try{
+      const r = await window.storage.get('matchups');
+      if(r && r.value) matchups = JSON.parse(r.value);
+    }catch(e){ matchups = {}; }
+    renderRoster();
+    renderHistory();
+    loadMatchupForWeek();
+  }
+
+  function loadMatchupForWeek(){
+    const week = $('weekInput').value;
+    $('matchupPaste').value = matchups[week] || '';
+    $('matchupSaved').textContent = matchups[week] ? 'Saved for week ' + week + '.' : '';
+  }
+
+  function currentMatchup(){
+    const week = $('weekInput').value;
+    return matchups[week] || '';
+  }
+
+  async function saveMeta(){
+    try{
+      await window.storage.set('team-meta', JSON.stringify({teamName: $('teamName').value, week: $('weekInput').value}));
+    }catch(e){ console.error('save meta failed', e); }
+  }
+  $('teamName').addEventListener('change', saveMeta);
+  $('weekInput').addEventListener('change', ()=>{ saveMeta(); loadMatchupForWeek(); });
+
+  async function saveRoster(){
+    try{
+      await window.storage.set('roster', JSON.stringify(roster));
+    }catch(e){ console.error('save roster failed', e); }
+  }
+
+  async function saveHistory(){
+    try{
+      await window.storage.set('history', JSON.stringify(history));
+    }catch(e){ console.error('save history failed', e); }
+  }
+
+  // ---------- Roster UI ----------
+  function renderRoster(){
+    const list = $('rosterList');
+    list.innerHTML = '';
+    if(roster.length === 0){
+      list.innerHTML = '<div class="empty-note">No players added yet.</div>';
+    }
+    roster.forEach((p, i)=>{
+      const row = document.createElement('div');
+      row.className = 'roster-row';
+      row.innerHTML = `
+        <input type="text" value="${escapeAttr(p.name)}" data-field="name" data-i="${i}" placeholder="Player name" />
+        <select data-field="pos" data-i="${i}">
+          ${POSITIONS.map(pos=>`<option value="${pos}" ${p.pos===pos?'selected':''}>${pos}</option>`).join('')}
+        </select>
+        <input type="text" value="${escapeAttr(p.team)}" data-field="team" data-i="${i}" placeholder="College team" />
+        <button class="remove-btn" data-i="${i}" title="Remove">&times;</button>
+      `;
+      list.appendChild(row);
+    });
+    list.querySelectorAll('input, select').forEach(el=>{
+      el.addEventListener('input', ()=>{
+        const i = +el.dataset.i, field = el.dataset.field;
+        roster[i][field] = el.value;
+      });
+    });
+    list.querySelectorAll('.remove-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        roster.splice(+btn.dataset.i, 1);
+        renderRoster();
+      });
+    });
+  }
+
+  $('addPlayerBtn').addEventListener('click', ()=>{
+    roster.push({name:'', pos:'RB', team:''});
+    renderRoster();
+  });
+
+  $('saveRosterBtn').addEventListener('click', async ()=>{
+    const btn = $('saveRosterBtn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    await saveRoster();
+    btn.textContent = 'Saved';
+    setTimeout(()=>{ btn.textContent = 'Save roster'; btn.disabled = false; }, 1200);
+  });
+
+  $('saveMatchupBtn').addEventListener('click', async ()=>{
+    const week = $('weekInput').value;
+    matchups[week] = $('matchupPaste').value.trim();
+    try{
+      await window.storage.set('matchups', JSON.stringify(matchups));
+      $('matchupSaved').textContent = 'Saved for week ' + week + '.';
+    }catch(e){
+      $('matchupSaved').textContent = 'Could not save — try again.';
+    }
+  });
+
+  $('importRosterBtn').addEventListener('click', async ()=>{
+    const pasted = $('yahooRosterPaste').value.trim();
+    const statusEl = $('importStatus');
+    if(!pasted){ statusEl.className = 'import-status error'; statusEl.textContent = 'Paste your roster page text first.'; return; }
+    const btn = $('importRosterBtn');
+    btn.disabled = true;
+    statusEl.className = 'import-status';
+    statusEl.textContent = 'Reading your roster...';
+    const prompt = `Below is text copied from a Yahoo Fantasy Football roster page for a college football league. Extract every player on the roster. Respond with ONLY a JSON array, no other text, no markdown fences. Each item: {"name": string, "pos": one of QB/RB/WR/TE/FLEX/K/DEF, "team": college team name or "" if unknown}. Skip bench headers, "empty" slots, and anything that isn't an actual player.\n\nPasted text:\n${pasted}`;
+    try{
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages: [{role:'user', content: prompt}]
+        })
+      });
+      if(!response.ok) throw new Error('request failed');
+      const data = await response.json();
+      const text = (data.content || []).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+      const cleaned = text.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+      const parsed = JSON.parse(cleaned);
+      if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('no players found');
+      let added = 0;
+      parsed.forEach(p=>{
+        if(!p.name) return;
+        const exists = roster.some(r => r.name.trim().toLowerCase() === p.name.trim().toLowerCase());
+        if(!exists){
+          roster.push({name: p.name, pos: POSITIONS.includes(p.pos) ? p.pos : 'RB', team: p.team || ''});
+          added++;
+        }
+      });
+      renderRoster();
+      await saveRoster();
+      statusEl.className = 'import-status';
+      statusEl.textContent = `Added ${added} player${added===1?'':'s'} (${parsed.length - added} already on your roster).`;
+      $('yahooRosterPaste').value = '';
+    }catch(e){
+      statusEl.className = 'import-status error';
+      statusEl.textContent = 'Could not read that as a roster. Try pasting the full roster table text.';
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  function escapeAttr(s){
+    return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function rosterSummary(){
+    if(roster.length === 0) return 'No roster on file.';
+    return roster.map(p=>`${p.name || '(unnamed)'} — ${p.pos}${p.team ? ', '+p.team : ''}`).join('; ');
+  }
+
+  // ---------- Claude API ----------
+  async function callClaude(prompt){
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{role:'user', content: prompt}],
+        tools: [{type:'web_search_20250305', name:'web_search'}]
+      })
+    });
+    if(!response.ok){
+      throw new Error('API request failed: ' + response.status);
+    }
+    const data = await response.json();
+    const text = (data.content || [])
+      .filter(block => block.type === 'text')
+      .map(block => block.text)
+      .join('\n\n');
+    return text || '(No response text returned.)';
+  }
+
+  function showResult(el, state, text){
+    el.className = 'result' + (state === 'loading' ? ' loading' : state === 'error' ? ' error' : '');
+    el.textContent = text;
+  }
+
+  function addHistory(kind, prompt, answer){
+    history.unshift({
+      kind, answer,
+      week: $('weekInput').value,
+      date: new Date().toLocaleDateString()
+    });
+    if(history.length > 40) history = history.slice(0,40);
+    saveHistory();
+    renderHistory();
+  }
+
+  function renderHistory(){
+    const list = $('historyList');
+    if(history.length === 0){
+      list.innerHTML = '<div class="empty-note">Nothing yet — run a start/sit, waiver, or trade check to build your log.</div>';
+      return;
+    }
+    list.innerHTML = history.map(h=>`
+      <div class="history-item">
+        <div class="meta">WEEK ${h.week} · ${h.kind} · ${h.date}</div>
+        <div class="body">${escapeAttr(h.answer)}</div>
+      </div>
+    `).join('');
+  }
+
+  $('clearHistoryBtn').addEventListener('click', async ()=>{
+    history = [];
+    await saveHistory();
+    renderHistory();
+  });
+
+  // ---------- Start/Sit ----------
+  $('startSitBtn').addEventListener('click', async ()=>{
+    const players = $('startSitPlayers').value.trim();
+    const resultEl = $('startSitResult');
+    if(!players){ showResult(resultEl,'error',"Enter the players you're deciding between first."); return; }
+    const btn = $('startSitBtn');
+    btn.disabled = true;
+    showResult(resultEl, 'loading', 'Checking current college football matchups and news...');
+    const week = $('weekInput').value;
+    const matchupCtx = currentMatchup();
+    const prompt = `You are a college fantasy football advisor. It is week ${week} of the current college football season. My full roster: ${rosterSummary()}.${matchupCtx ? ' Here is my Yahoo fantasy matchup page for this week (my team, opponent, and rosters):\n\n' + matchupCtx + '\n\n' : ''} I'm deciding between these players for my lineup this week: ${players}. Search for current matchup context, recent performance, and injury news, then tell me clearly who to start and who to sit, with 3-4 sentences of reasoning. Be direct and concise.`;
+    try{
+      const answer = await callClaude(prompt);
+      showResult(resultEl, 'done', answer);
+      addHistory('Start/Sit', prompt, answer);
+    }catch(e){
+      showResult(resultEl, 'error', 'Something went wrong getting this read. Try again in a moment.');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // ---------- Waiver ----------
+  $('waiverBtn').addEventListener('click', async ()=>{
+    const available = $('waiverPlayers').value.trim();
+    const resultEl = $('waiverResult');
+    const btn = $('waiverBtn');
+    btn.disabled = true;
+    showResult(resultEl, 'loading', "Scanning this week's college football waiver landscape...");
+    const week = $('weekInput').value;
+    const matchupCtx = currentMatchup();
+    const prompt = `You are a college fantasy football advisor. It is week ${week} of the current college football season. My roster: ${rosterSummary()}.${matchupCtx ? ' Here is my Yahoo fantasy matchup page for this week:\n\n' + matchupCtx + '\n\n' : ''} ${available ? "Players available on my league's waiver wire: " + available + '. Recommend the best pickups from this list for my roster.' : "Search for this week's top waiver-wire-worthy college football fantasy performers (breakout players, players stepping into bigger roles due to injury, etc) and recommend 3-5 pickups that would help my roster."} Give brief reasoning for each. Be concise.`;
+    try{
+      const answer = await callClaude(prompt);
+      showResult(resultEl, 'done', answer);
+      addHistory('Waiver', prompt, answer);
+    }catch(e){
+      showResult(resultEl, 'error', 'Something went wrong finding pickups. Try again in a moment.');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // ---------- Trade ----------
+  $('tradeBtn').addEventListener('click', async ()=>{
+    const give = $('tradeGive').value.trim();
+    const get = $('tradeGet').value.trim();
+    const resultEl = $('tradeResult');
+    if(!give || !get){ showResult(resultEl, 'error', 'Fill in both sides of the trade first.'); return; }
+    const btn = $('tradeBtn');
+    btn.disabled = true;
+    showResult(resultEl, 'loading', 'Weighing both sides of the deal...');
+    const week = $('weekInput').value;
+    const matchupCtx = currentMatchup();
+    const prompt = `You are a college fantasy football advisor. It is week ${week} of the current college football season. My roster: ${rosterSummary()}.${matchupCtx ? ' Here is my Yahoo fantasy matchup page for this week:\n\n' + matchupCtx + '\n\n' : ''} I'm considering a trade: I would GIVE these players: ${give}. I would GET these players: ${get}. Search for current form, role, and outlook on these players, then give a fairness grade (favors me / fair / favors opponent) and 3-4 sentences of reasoning covering rest-of-season value, not just this week.`;
+    try{
+      const answer = await callClaude(prompt);
+      showResult(resultEl, 'done', answer);
+      addHistory('Trade', prompt, answer);
+    }catch(e){
+      showResult(resultEl, 'error', 'Something went wrong analyzing this trade. Try again in a moment.');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  loadState();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{ /* offline caching is a bonus, not required */ });
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
