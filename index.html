@@ -118,20 +118,24 @@
   <div class="panel active" id="panel-roster">
     <div class="card">
       <h2>Import from Yahoo</h2>
-      <p class="hint">On Yahoo, open your team's roster page, select all the text on it (Ctrl/Cmd+A within the roster table works best), copy, and paste it below. Claude will pull out player names, positions, and teams.</p>
+      <p class="hint">Paste text copied from your Yahoo roster page, or — if you're in the Yahoo app and can't select text — upload a screenshot instead. Claude will pull out player names, positions, and teams either way.</p>
       <textarea id="yahooRosterPaste" placeholder="Paste your Yahoo roster page text here..."></textarea>
       <div class="btn-row">
         <button class="btn" id="importRosterBtn">Parse & add to roster</button>
+        <label class="btn-ghost" for="rosterScreenshot" style="cursor:pointer;">Upload screenshot instead</label>
+        <input type="file" id="rosterScreenshot" accept="image/*" style="display:none;">
       </div>
       <div class="import-status" id="importStatus"></div>
     </div>
 
     <div class="card">
       <h2>This week's matchup</h2>
-      <p class="hint">Paste your Yahoo matchup page (your team, opponent, and their roster). Every start/sit, waiver, and trade check will use this as context.</p>
+      <p class="hint">Paste your Yahoo matchup page (your team, opponent, and their roster), or upload a screenshot of it. Every start/sit, waiver, and trade check will use this as context.</p>
       <textarea id="matchupPaste" placeholder="Paste your Yahoo matchup page text here..."></textarea>
       <div class="btn-row">
         <button class="btn" id="saveMatchupBtn">Save matchup</button>
+        <label class="btn-ghost" for="matchupScreenshot" style="cursor:pointer;">Upload screenshot instead</label>
+        <input type="file" id="matchupScreenshot" accept="image/*" style="display:none;">
       </div>
       <div class="matchup-saved" id="matchupSaved"></div>
     </div>
@@ -354,15 +358,14 @@
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 1000,
+          max_tokens: 2000,
           messages: [{role:'user', content: prompt}]
         })
       });
       if(!response.ok) throw new Error('request failed');
       const data = await response.json();
       const text = (data.content || []).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
-      const cleaned = text.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
-      const parsed = JSON.parse(cleaned);
+      const parsed = extractJsonArray(text);
       if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('no players found');
       let added = 0;
       parsed.forEach(p=>{
@@ -386,6 +389,70 @@
     }
   });
 
+  $('rosterScreenshot').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const statusEl = $('importStatus');
+    statusEl.className = 'import-status';
+    statusEl.textContent = 'Reading your screenshot...';
+    const prompt = `This is a screenshot of a Yahoo Fantasy Football roster page for a college football league. Extract every player on the roster. Respond with ONLY a JSON array, no other text, no markdown fences. Each item: {"name": string, "pos": one of QB/RB/WR/TE/FLEX/K/DEF, "team": college team name or "" if unknown}. Skip bench headers, "empty" slots, and anything that isn't an actual player.`;
+    try{
+      const text = await callClaudeWithImage(prompt, file);
+      const parsed = extractJsonArray(text);
+      if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('no players found');
+      let added = 0;
+      parsed.forEach(p=>{
+        if(!p.name) return;
+        const exists = roster.some(r => r.name.trim().toLowerCase() === p.name.trim().toLowerCase());
+        if(!exists){
+          roster.push({name: p.name, pos: POSITIONS.includes(p.pos) ? p.pos : 'RB', team: p.team || ''});
+          added++;
+        }
+      });
+      renderRoster();
+      await saveRoster();
+      statusEl.textContent = `Added ${added} player${added===1?'':'s'} from the screenshot (${parsed.length - added} already on your roster).`;
+    }catch(err){
+      statusEl.className = 'import-status error';
+      statusEl.textContent = 'Could not read that screenshot as a roster. Try a clearer crop of the roster list.';
+    }finally{
+      e.target.value = '';
+    }
+  });
+
+  $('matchupScreenshot').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const savedEl = $('matchupSaved');
+    savedEl.textContent = 'Reading your screenshot...';
+    const prompt = `This is a screenshot of a Yahoo Fantasy Football matchup page for a college football league. Write a plain-text summary covering: my team name, my opponent's team name, and every player listed on both rosters (with position). Keep it factual and concise — this will be used as context for fantasy football analysis, not read directly by a person.`;
+    try{
+      const summary = await callClaudeWithImage(prompt, file);
+      $('matchupPaste').value = summary;
+      const week = $('weekInput').value;
+      matchups[week] = summary;
+      await window.storage.set('matchups', JSON.stringify(matchups));
+      savedEl.textContent = 'Saved for week ' + week + ' from screenshot.';
+    }catch(err){
+      savedEl.className = 'matchup-saved error';
+      savedEl.textContent = 'Could not read that screenshot. Try a clearer crop of the matchup page.';
+    }finally{
+      e.target.value = '';
+    }
+  });
+
+  function extractJsonArray(text){
+    const cleaned = text.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+    try{
+      return JSON.parse(cleaned);
+    }catch(e){
+      const start = cleaned.indexOf('[');
+      const end = cleaned.lastIndexOf(']');
+      if(start === -1 || end === -1 || end < start) throw e;
+      return JSON.parse(cleaned.slice(start, end + 1));
+    }
+  }
+
   function escapeAttr(s){
     return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
   }
@@ -396,6 +463,39 @@
   }
 
   // ---------- Claude API ----------
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function callClaudeWithImage(prompt, file){
+    const base64 = await fileToBase64(file);
+    const mediaType = file.type || 'image/jpeg';
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: [
+            {type: 'image', source: {type: 'base64', media_type: mediaType, data: base64}},
+            {type: 'text', text: prompt}
+          ]
+        }]
+      })
+    });
+    if(!response.ok) throw new Error('API request failed: ' + response.status);
+    const data = await response.json();
+    const text = (data.content || []).filter(b=>b.type==='text').map(b=>b.text).join('\n\n').trim();
+    return text || '(No response text returned.)';
+  }
+
   async function callClaude(prompt){
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
